@@ -1,14 +1,12 @@
 use super::datatypes;
-use std::cmp::PartialEq;
-use std::fmt::{write, Display};
+use std::fmt::Display;
 use std::ops::{Index, IndexMut};
-use std::ptr::eq;
+
 
 impl datatypes::Tensor {
     fn flatten_index(&self, index: &datatypes::Idx) -> usize {
         let under: Vec<usize> = index.dims.iter().copied().rev().collect();
         // index will we representing (x, y, z, ...)
-        let mut prod = 1;
         let shape: Vec<usize> = self.idx().dims.iter().copied().rev().collect();
         let mut idx = under[0];
         let mut prod = 1;
@@ -71,7 +69,7 @@ impl datatypes::Tensor {
         let mut first = true;
         let dims = self.idx().dims.clone();
         out += "[";
-        for i in 0..dims[dim] {
+        for _ in 0..dims[dim] {
             if !first {
                 out += ", ";
             }
@@ -81,7 +79,7 @@ impl datatypes::Tensor {
         out += "]";
         return out;
     }
-
+// FIXME: error A=[[[1,2],[3,4]],[[5,6],[7,8]]] is represented as [[[1, 2], [1, 2]], [[3, 4], [3, 4]]]
     fn format_impl(&self) -> String {
         let dims = self.idx().dims.clone();
         let mut out = String::new();

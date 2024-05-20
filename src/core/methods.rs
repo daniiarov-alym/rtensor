@@ -99,12 +99,6 @@ impl datatypes::Tensor {
         */
     }
 
-	// TODO: review this and inner and outer and transpose
-    pub fn tensor_product(&self, other: &Self) -> Self {
-        datatypes::Tensor::new(self.idx())
-    }
-
-    // NOTE: looks like transpose does not work with vectors
     pub fn tensor_transpose(&self) -> Self {
         let new_dims: Vec<usize> = self.idx().dims.iter().copied().rev().collect();
         let new_shape = datatypes::Idx::new(&new_dims);

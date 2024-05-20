@@ -1,9 +1,5 @@
-use crate::core::datatypes::Tensor;
-use std::collections::HashMap;
-use std::fmt::{format, Error};
-
 use super::ast::Expr;
-use super::tokenizer::{Token, Tokenizer};
+use super::tokenizer::Token;
 
 pub struct Parser {
     tokens: Vec<Token>,

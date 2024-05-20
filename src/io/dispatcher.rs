@@ -121,10 +121,9 @@ impl Dispatcher {
         if let Err(e) = self.process_tensor_definition_impl(expr, &mut builder, true) {
             return Err(e);
         }
-
         Ok(ReturnResult::Tensor(builder.build()))
     }
-
+    
     fn process_tensor_definition_impl(
         &self,
         expr: &Expr,
@@ -184,6 +183,8 @@ impl Dispatcher {
                     return self.process_inner_call(evaluated);
                 } else if name == "transpose" {
                     return self.process_transpose_call(evaluated);
+                } else if name == "hosvd" {
+                    return self.process_hosvd(evaluated);
                 }
             }
             _ => {
@@ -419,6 +420,21 @@ impl Dispatcher {
             ReturnResult::Literal(_) => return Ok(args[0].clone()),
             ReturnResult::Tensor(t) => {
                 return Ok(ReturnResult::Tensor(t.tensor_transpose()));
+            }
+            _ => {
+                return Err(format!("invalid argument: {:?}", args[0]));
+            }
+        }
+    }
+    
+    fn process_hosvd(&self, args: Vec<ReturnResult>) -> Result<ReturnResult, String> {
+        if args.len() != 1 {
+            return Err("hosvd accepts only 1 argument".to_string());
+        }
+        match &args[0] {
+            ReturnResult::Tensor(t) => {
+                t.hosvd();
+                return Ok(ReturnResult::Nothing);
             }
             _ => {
                 return Err(format!("invalid argument: {:?}", args[0]));

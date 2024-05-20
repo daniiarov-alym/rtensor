@@ -46,8 +46,13 @@ impl Tensor {
     pub(super) fn idx(&self) -> Idx {
         self.idx.clone()
     }
+    
+    pub fn data(&self) -> &Vec<f64> {
+        &self.raw_data
+    }
 }
 
+#[derive(Debug)]
 pub struct TensorBuilder {
     pub len: usize,
     pub shape: Vec<usize>,
@@ -66,10 +71,4 @@ impl TensorBuilder {
     pub fn build(self) -> Tensor {
         return Tensor::new_with_raw_data(Idx::new(&self.shape), self.raw_data);
     }
-}
-
-// NOTE: this is prototype
-pub enum Either {
-    Scalar(f64),
-    Tensor(Tensor),
 }

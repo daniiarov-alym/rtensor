@@ -4,8 +4,50 @@ use nalgebra::{DMatrix, Dynamic, Matrix, U1, U2, U3};
 // TODO: this module to be implemented
 
 impl Tensor {
+	// Mode-m matrixizing function
+    fn mode_m_matrixizing(&self, m: usize) -> Vec<Vec<f64>> {
+        let mut result = vec![vec![0.0; self.num_cols(m)]; self.shape()[m]];
+        let mut multi_index = vec![0; self.shape().len()];
+        
+        for i in 0..self.data().len() {
+            let (j, k) = self.calculate_indices(i, m, &mut multi_index);
+            result[j][k] = self.data()[i];
+        }
+        
+        result
+    }
+
+    // Calculate the number of columns for the resulting matrix
+    fn num_cols(&self, m: usize) -> usize {
+        self.shape().iter().enumerate().filter(|&(i, _)| i != m).map(|(_, &dim)| dim).product()
+    }
+
+    // Calculate the linear indices for the mode-m matrix
+    fn calculate_indices(&self, flat_index: usize, m: usize, multi_index: &mut Vec<usize>) -> (usize, usize) {
+        self.flat_to_multi_index(flat_index, multi_index);
+        
+        let j = multi_index[m];
+        
+        let k = multi_index.iter().enumerate()
+            .filter(|&(i, _)| i != m)
+            .fold(0, |acc, (i, &idx)| acc * self.shape()[i] + idx);
+        
+        (j, k)
+    }
 	
-	fn flatten_mode_m(&self, m: usize) -> Vec<Vec<f64>> {
+	fn flat_to_multi_index(&self, mut flat_index: usize, multi_index: &mut Vec<usize>) {
+        let dims_product: Vec<usize> = self.shape().iter().rev().scan(1, |state, &x| {
+            let res = *state;
+            *state *= x;
+            Some(res)
+        }).collect::<Vec<_>>().into_iter().rev().collect();
+
+        for i in 0..self.shape().len() {
+            multi_index[i] = (flat_index / dims_product[i]) % self.shape()[i];
+        }
+    }
+	
+	/*fn flatten_mode_m(&self, m: usize) -> Vec<Vec<f64>> {
 		// R[j, k] = self[i1, ..., im, ..., iM] 
 		// j = i_m, k = 1 + sum((i_n-1)*prod(Il)) 
 		let dims = self.shape();
@@ -17,31 +59,16 @@ impl Tensor {
 			}
 		}
 		let mut matrix: Vec<Vec<f64>> = vec![vec![0.0; row_size]; mode_size];
-		let mut index = vec![0 as usize; dims.len()];
 		// TODO: implement
-		for row in 0..mode_size {
-			let mut dim_idx = 0;
-			let mut sum_cols = 0 as usize;
-			for column in 0..row_size {
-				for i in 0..dims.len() {
-					if i == m {
-						index[m] = row;
-					} else {
-						if false {
-							index[m] = dims[i];
-						} else {
-							index[m] = column - sum_cols;
-						}
-					}
-				}				
-				let idx = Idx::new(&index);
-			}
-		}
+		
+		// j = i_m
+		// k = 1 + sum((i_n-1)prod(n-1))
 		
 		return matrix
-	}
+	}*/
 	
-	pub fn svd(matrix: Vec<Vec<f64>>) {
+	
+	pub fn svd(&self, matrix: Vec<Vec<f64>>) -> Vec<Vec<f64>>{
 		let rows = matrix.len();
 		let cols = matrix[0].len();
 		let mut mat = DMatrix::zeros(rows, cols);
@@ -54,22 +81,25 @@ impl Tensor {
 		// Compute SVD
 		let svd = mat.svd(true, true); // Compute left and right singular vectors
 	
-		// Extract U, S, and V matrices
+		// Extract U matrix
 		let u = svd.u.unwrap();
-		let s = svd.singular_values;
-		let v = svd.v_t.unwrap();
-	
+		
+		let u_t = u.transpose();
+		return matrix;
 	}
+	
 	
 	
 	// implementation of HOSVD
 	pub fn hosvd(&self) {
+		
+		let mut singular_vectors: Vec<Vec<Vec<f64>>> = Vec::new();
 		for m in 0..self.rank() {
-			let a_m = self.flatten_mode_m(m);
-			// svd(a_m)
+			let a_m = self.mode_m_matrixizing(m);
+			println!("{:?}", a_m);
+			let u_m = self.svd(a_m);
+			singular_vectors.push(u_m)
 			
-			// construct mode-m flattening A_m
-			// compute (compact) SVD A_m = U_m S_m V_m^T and store left singular vectors
 		}
 		// compute core tensor S with multilinear multiplication S = A x U_1^H x ... x U_m^h
 	}

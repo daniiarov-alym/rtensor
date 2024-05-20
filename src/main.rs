@@ -4,9 +4,6 @@ mod lang;
 mod symbolic;
 mod numerical;
 
-use assert_approx_eq::assert_approx_eq;
-use core::datatypes;
-use io::dispatcher;
 use io::reader;
 use io::writer;
 fn main() {
@@ -18,9 +15,12 @@ fn main() {
         let read = reader.read_input();
         match read {
             Ok(read) => {
+                if read.is_empty() {
+                    break;
+                }
                 let mut tokenizer = lang::tokenizer::Tokenizer::new(&read);
                 let tokens = tokenizer.tokenize();
-                println!("{:?}", tokens);
+                //println!("{:?}", tokens);
                 let mut parser = lang::parser::Parser::new(tokens);
                 match parser.parse_impl() {
                     Ok(expr) => {
