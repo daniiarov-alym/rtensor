@@ -1,6 +1,6 @@
 use crate::core::datatypes::{Idx, Tensor, TensorBuilder};
 use crate::lang::ast::Expr;
-use crate::symbolic::{self, SymbolicExpr};
+use crate::symbolic::SymbolicExpr;
 use std::collections::HashMap;
 
 #[derive(Debug, Clone)]
@@ -191,7 +191,6 @@ impl Dispatcher {
                 return Err("unexpected expression type".to_string());
             }
         }
-        Ok(ReturnResult::Nothing)
     }
 
     fn process_binary_op(&mut self, expr: &Expr) -> Result<ReturnResult, String> {
@@ -223,7 +222,6 @@ impl Dispatcher {
                 return Err("unexpected expression type".to_string());
             }
         }
-        Ok(ReturnResult::Nothing)
     }
 
     fn process_addition(
@@ -789,8 +787,6 @@ impl Dispatcher {
             }
         }
         
-        
-        return Ok(ReturnResult::Nothing);
     }
     
     
@@ -851,7 +847,5 @@ impl Dispatcher {
                 return Err(format!("invalid argument to evaluate: {:?}", expr))
             }
         }    
-        
-        return Ok(ReturnResult::Nothing)
     }
 }

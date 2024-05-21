@@ -139,13 +139,7 @@ impl Parser {
                     }
                     Token::Literal(f) => return Err(format!("unexpected token {:?}", f)),
                     Token::Punctuation(s) => return Err(format!("unexcpected token: {:?}", s)),
-                    Token::Comment(_) => return Ok(()),
-                    _ => {
-                        return Err(format!(
-                            "unexpected token {:?}",
-                            self.tokens[self.current_position + 1]
-                        ))
-                    }
+                    Token::Comment(_) => return Ok(())
                 }
             }
             Some(Token::Identifier(id)) => {
@@ -244,22 +238,10 @@ impl Parser {
                             Token::Punctuation(s) => {
                                 return Err(format!("unexcpected token: {:?}", s))
                             }
-                            Token::Comment(_) => return Ok(()),
-                            _ => {
-                                return Err(format!(
-                                    "unexpected token {:?}",
-                                    self.tokens[self.current_position + 1]
-                                ))
-                            }
+                            Token::Comment(_) => return Ok(())
                         }
                     }
                     Token::Comment(_) => return Ok(()),
-                    _ => {
-                        return Err(format!(
-                            "unexpected token {:?}",
-                            self.tokens[self.current_position + 1]
-                        ))
-                    }
                 }
             }
             Some(Token::Literal(f_ext)) => {
@@ -302,12 +284,6 @@ impl Parser {
                     Token::Literal(f) => return Err(format!("unexpected token {:?}", f)),
                     Token::Punctuation(s) => return Err(format!("unexpected token {:?}", s)),
                     Token::Comment(_) => return Ok(()),
-                    _ => {
-                        return Err(format!(
-                            "unexpected token {:?}",
-                            self.tokens[self.current_position + 1]
-                        ))
-                    }
                 }
             }
             Some(Token::Comment(_)) => {
@@ -327,7 +303,7 @@ impl Parser {
         // or
         // Tensor := [Tensor, ..., Tensor]
         self.advance(); // ignore first '['
-        let mut expression = Expr::Literal(0.0);
+        let mut expression;
         let mut comma_closed = false;
         let mut paren_closed = false;
         let mut length: usize = 0;
@@ -352,7 +328,7 @@ impl Parser {
                                 length = v.len();
                             }
                             read_length = true;
-                            if (v.len() != length) {
+                            if v.len() != length {
                                 return Err(format!(
                                     "invalid length of tensor dimension entry, should be {}, is {}",
                                     length,
@@ -401,7 +377,7 @@ impl Parser {
         let mut paren_closed = false;
         let mut comma_closed = false;
         while let Some(token) = self.current_token() {
-            let mut expr = Expr::Literal(0.0);
+            let expr;
             match &token {
                 Token::Identifier(s) => {
                     comma_closed = true;

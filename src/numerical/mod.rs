@@ -1,7 +1,7 @@
 use std::vec;
 
-use crate::core::datatypes::{Idx, Tensor};
-use nalgebra::{DMatrix, Dynamic, Matrix, U1, U2, U3};
+use crate::core::datatypes::Tensor;
+use nalgebra::DMatrix;
 
 impl Tensor {
     // NOTE: seems like here is an error
@@ -47,7 +47,7 @@ impl Tensor {
         (j, k)
     }
 
-    fn flat_to_multi_index(&self, mut flat_index: usize, multi_index: &mut Vec<usize>) {
+    fn flat_to_multi_index(&self, flat_index: usize, multi_index: &mut Vec<usize>) {
         let dims_product: Vec<usize> = self
             .shape()
             .iter()
