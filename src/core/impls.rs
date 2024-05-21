@@ -42,74 +42,37 @@ impl IndexMut<datatypes::Idx> for datatypes::Tensor {
     }
 }
 
-impl datatypes::Tensor {
-    fn format_array(&self, level: usize) -> String {
-        let elements = self.idx().dims[self.idx().dims.len() - 1];
-        let mut out = String::new();
-        let mut first = true;
-        out += "[";
-        for i in 0..elements {
-            if !first {
-                out += ", "
-            }
-            first = false;
-            out += &format!("{}", self.raw_data[level * elements + i])
-        }
-        out += "]";
-        out
-    }
-
-    fn format_impl_inner(&self, idx: usize, dim: usize) -> String {
-        let mut out = String::new();
-        if dim == self.idx().dims.len() - 1 {
-            out = self.format_array(idx);
-            return out;
-        }
-        let mut first = true;
-        let dims = self.idx().dims.clone();
-        out += "[";
-        for _ in 0..dims[dim] {
-            if !first {
-                out += ", ";
-            }
-            first = false;
-            out += &self.format_impl_inner(idx, dim + 1);
-        }
-        out += "]";
-        return out;
-    }
-    // FIXME: error A=[[[1,2],[3,4]],[[5,6],[7,8]]] is represented as [[[1, 2], [1, 2]], [[3, 4], [3, 4]]]
-    fn format_impl(&self) -> String {
-        let dims = self.idx().dims.clone();
-        let mut out = String::new();
-
-        if dims.len() == 1 {
-            out = self.format_array(0);
-            return out;
-        }
-        let mut first = true;
-        for i in 0..dims[0] {
-            if !first {
-                out += ", ";
-            }
-            first = false;
-            out += &self.format_impl_inner(i, 1);
-        }
-        out
+impl Display for datatypes::Tensor {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let mut offset: usize = 0;
+        let out = self.format(0, &mut offset);
+        write!(f, "{}", out)
     }
 }
 
-impl Display for datatypes::Tensor {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        let mut out = String::new();
 
-        if self.idx().dims.len() == 1 {
-            out = self.format_array(0)
+impl datatypes::Tensor {
+    
+    fn format(&self, dim_idx: usize, offset: &mut usize) -> String {
+        let mut out = String::new();
+        out += "[";
+        if dim_idx == self.rank()-1 {
+            for i in 0..self.idx().dims[dim_idx] {
+                if i > 0 {
+                    out += ", "
+                }
+                out += &format!("{}", self.raw_data[*offset+i])
+            }
+            *offset += self.idx().dims[dim_idx];
         } else {
-            out += "[";
-            out += &self.format_impl();
-            out += "]";
+            for i in 0..self.idx().dims[dim_idx] {
+                if i > 0 {
+                    out += ", ";
+                }    
+                out += &self.format(dim_idx+1, offset);
+            }  
         }
-        write!(f, "{}", out)
+        out += "]"; 
+        out
     }
 }
