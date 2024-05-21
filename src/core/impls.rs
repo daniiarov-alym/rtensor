@@ -2,7 +2,6 @@ use super::datatypes;
 use std::fmt::Display;
 use std::ops::{Index, IndexMut};
 
-
 impl datatypes::Tensor {
     fn flatten_index(&self, index: &datatypes::Idx) -> usize {
         let under: Vec<usize> = index.dims.iter().copied().rev().collect();
@@ -79,7 +78,7 @@ impl datatypes::Tensor {
         out += "]";
         return out;
     }
-// FIXME: error A=[[[1,2],[3,4]],[[5,6],[7,8]]] is represented as [[[1, 2], [1, 2]], [[3, 4], [3, 4]]]
+    // FIXME: error A=[[[1,2],[3,4]],[[5,6],[7,8]]] is represented as [[[1, 2], [1, 2]], [[3, 4], [3, 4]]]
     fn format_impl(&self) -> String {
         let dims = self.idx().dims.clone();
         let mut out = String::new();

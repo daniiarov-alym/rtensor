@@ -46,7 +46,7 @@ impl Tensor {
     pub(super) fn idx(&self) -> Idx {
         self.idx.clone()
     }
-    
+
     pub fn data(&self) -> &Vec<f64> {
         &self.raw_data
     }

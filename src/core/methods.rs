@@ -75,28 +75,6 @@ impl datatypes::Tensor {
                 }
             }
         }
-        /* NOTE: optimized
-        let mut done = false;
-        while !done {
-            // Print the current value of `a`
-            println!("{:?}", a);
-
-            // Increment `a` as a single number in mixed-radix
-            let mut idx = 0;
-            loop {
-                a[idx] += 1;
-                if a[idx] < b[idx] {
-                    break;
-                }
-                a[idx] = 0;
-                idx += 1;
-                if idx >= a.len() {
-                    done = true;
-                    break;
-                }
-            }
-        }
-        */
     }
 
     pub fn tensor_transpose(&self) -> Self {

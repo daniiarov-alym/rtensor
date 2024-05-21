@@ -87,7 +87,7 @@ impl<'a> Tokenizer<'a> {
                         tokens.push(Token::Literal(number));
                     }
                     '+' | '-' | '*' | '/' | '=' => {
-                        // it would be unary - if A=-1 
+                        // it would be unary - if A=-1
                         if c == '-' && self.position == 0 && self.input.len() > 1 {
                             self.position += 1;
                             match self.input.chars().nth(self.position).unwrap() {
@@ -101,10 +101,9 @@ impl<'a> Tokenizer<'a> {
                             }
                             continue;
                         }
-                        if c == '-' && self.position > 0 && self.position < self.input.len()-1 {
-                            match self.input.chars().nth(self.position-1).unwrap() {
+                        if c == '-' && self.position > 0 && self.position < self.input.len() - 1 {
+                            match self.input.chars().nth(self.position - 1).unwrap() {
                                 '(' | '[' | ',' => {
-                                    
                                     self.position += 1;
                                     match self.input.chars().nth(self.position).unwrap() {
                                         '0'..='9' => {
@@ -117,11 +116,9 @@ impl<'a> Tokenizer<'a> {
                                         }
                                     }
                                 }
-                                _ => {
-                                    
-                                }
+                                _ => {}
                             }
-                        } 
+                        }
                         let operator = self.read_operator();
                         tokens.push(Token::Operator(operator));
                     }

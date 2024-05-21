@@ -1,8 +1,8 @@
 mod core;
 mod io;
 mod lang;
-mod symbolic;
 mod numerical;
+mod symbolic;
 
 use io::reader;
 use io::writer;
@@ -27,21 +27,14 @@ fn main() {
                         //println!("Input represents a valid statement: {:?}", expr);
                         let result = dispatcher.process_expr(expr);
                         if let Err(e) = &result {
-                            println!("{}", e);
+                            println!("Error: {}", e);
+                            continue;
                         }
-                        let result = result;
-                        match result {
-                            Ok(r) => {
-                                let _ = writer.write_return_result(r);
-                            }
-                            Err(e) => {
-                                println!("Error: {}", e);
-                            }
-                        }
+                        let result = result.unwrap();
+                        let _ = writer.write_return_result(result);
                     }
                     Err(err) => println!("Error: {}", err),
                 }
-
             }
             Err(e) => {
                 writer.write_output(&e).unwrap();

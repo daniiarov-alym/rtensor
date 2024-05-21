@@ -408,7 +408,7 @@ impl Parser {
                     expr = Expr::Identifier(s.clone());
                     args.push(expr);
                     self.advance()
-                    // TODO here we need to check that next token is not ( 
+                    // TODO here we need to check that next token is not (
                 }
                 Token::Literal(f) => {
                     comma_closed = true;
@@ -424,7 +424,7 @@ impl Parser {
                     self.advance(); // skip comma, but add check that commas are well formed
                 }
                 Token::Punctuation(')') => {
-                    if !comma_closed {
+                    if !comma_closed && args.len() != 0 {
                         return Err(format!("Unexpected comma in function call arguments"));
                     }
                     paren_closed = true;
@@ -444,5 +444,4 @@ impl Parser {
         }
         Ok(())
     }
-
 }

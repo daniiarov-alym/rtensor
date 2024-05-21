@@ -1,5 +1,6 @@
 use crate::core::datatypes::{Idx, Tensor, TensorBuilder};
 use crate::lang::ast::Expr;
+use crate::symbolic::{self, SymbolicExpr};
 use std::collections::HashMap;
 
 #[derive(Debug, Clone)]
@@ -8,12 +9,7 @@ pub enum ReturnResult {
     Literal(f64),
     Tensor(Tensor),
     TensorShape(Vec<usize>),
-    Symbol(String),
-    /*
-    TODO:
-        add enum variants to represent symbols and not fully evaluated expressions
-        and handles
-    */
+    Symbolic(SymbolicExpr),
 }
 // TODO: solve precedence issues
 
@@ -35,7 +31,7 @@ impl Dispatcher {
             Expr::Identifier(s) => {
                 let val = self.storage.get(s);
                 if val.is_none() {
-                    return Ok(ReturnResult::Symbol(s.clone()));
+                    return Ok(ReturnResult::Symbolic(SymbolicExpr::Symbol(s.clone())));
                 }
                 return Ok(val.unwrap().clone());
             }
@@ -75,7 +71,7 @@ impl Dispatcher {
             Expr::Identifier(s) => {
                 let val = self.storage.get(s);
                 if val.is_none() {
-                    return Ok(ReturnResult::Symbol(s.clone()));
+                    return Ok(ReturnResult::Symbolic(SymbolicExpr::Symbol(s.clone())));
                 }
                 return Ok(val.unwrap().clone());
             }
@@ -83,7 +79,7 @@ impl Dispatcher {
                 return Ok(ReturnResult::Literal(*f));
             }
             Expr::Tensor(_) => return self.process_tensor_definition(&expr),
-            Expr::Assignment {..} => {
+            Expr::Assignment { .. } => {
                 return Err("unexpected assignment in subexpression".to_string());
             }
             Expr::BinaryOp { .. } => {
@@ -123,7 +119,7 @@ impl Dispatcher {
         }
         Ok(ReturnResult::Tensor(builder.build()))
     }
-    
+
     fn process_tensor_definition_impl(
         &self,
         expr: &Expr,
@@ -152,7 +148,6 @@ impl Dispatcher {
                 return Err("unexpected expression type".to_string());
             }
         }
-
     }
 
     fn process_fn_call(&self, expr: &Expr) -> Result<ReturnResult, String> {
@@ -185,7 +180,12 @@ impl Dispatcher {
                     return self.process_transpose_call(evaluated);
                 } else if name == "hosvd" {
                     return self.process_hosvd(evaluated);
+                } else if name == "evaluate" {
+                    return self.evaluate_symbolic(evaluated);
+                } else {
+                    return Err(format!("function {:?} is not recognized", name));
                 }
+                
             }
             _ => {
                 return Err("unexpected expression type".to_string());
@@ -215,6 +215,8 @@ impl Dispatcher {
                     return self.process_multiplication(left_eval, right_eval);
                 } else if op == "/" {
                     return self.process_division(left_eval, right_eval);
+                } else {
+                    return Err(format!("operation {:?} is not recognized", op));
                 }
             }
             _ => {
@@ -233,13 +235,53 @@ impl Dispatcher {
         match left {
             ReturnResult::Literal(lhs) => match right {
                 ReturnResult::Literal(rhs) => return Ok(ReturnResult::Literal(lhs + rhs)),
+                ReturnResult::Symbolic(rhs) => {
+                    return Ok(ReturnResult::Symbolic(SymbolicExpr::BinaryOp {
+                        op: "+".to_string(),
+                        left: Box::new(SymbolicExpr::UnnamedLiteral { literal: lhs }),
+                        right: Box::new(rhs),
+                    }))
+                }
                 _ => {
                     return Err("unexpected operand type".to_string());
                 }
             },
             ReturnResult::Tensor(lhs) => match right {
                 ReturnResult::Tensor(rhs) => return Ok(ReturnResult::Tensor(lhs + rhs)),
+                ReturnResult::Symbolic(rhs) => {
+                    return Ok(ReturnResult::Symbolic(SymbolicExpr::BinaryOp {
+                        op: "+".to_string(),
+                        left: Box::new(SymbolicExpr::UnnamedTensor { tensor: lhs }),
+                        right: Box::new(rhs),
+                    }))
+                }
                 _ => return Err("unexpected operand type".to_string()),
+            },
+            ReturnResult::Symbolic(lhs) => match right {
+                ReturnResult::Tensor(rhs) => {
+                    return Ok(ReturnResult::Symbolic(SymbolicExpr::BinaryOp {
+                        op: "+".to_string(),
+                        left: Box::new(lhs),
+                        right: Box::new(SymbolicExpr::UnnamedTensor { tensor: rhs }),
+                    }));
+                }
+                ReturnResult::Literal(rhs) => {
+                    return Ok(ReturnResult::Symbolic(SymbolicExpr::BinaryOp {
+                        op: "+".to_string(),
+                        left: Box::new(lhs),
+                        right: Box::new(SymbolicExpr::UnnamedLiteral { literal: rhs }),
+                    }));
+                }
+                ReturnResult::Symbolic(rhs) => {
+                    return Ok(ReturnResult::Symbolic(SymbolicExpr::BinaryOp {
+                        op: "+".to_string(),
+                        left: Box::new(lhs),
+                        right: Box::new(rhs),
+                    }));
+                }
+                _ => {
+                    return Err("unexpected operand type".to_string());
+                }
             },
             _ => return Err("unexpected operand type".to_string()),
         }
@@ -254,13 +296,53 @@ impl Dispatcher {
         match left {
             ReturnResult::Literal(lhs) => match right {
                 ReturnResult::Literal(rhs) => return Ok(ReturnResult::Literal(lhs - rhs)),
+                ReturnResult::Symbolic(rhs) => {
+                    return Ok(ReturnResult::Symbolic(SymbolicExpr::BinaryOp {
+                        op: "-".to_string(),
+                        left: Box::new(SymbolicExpr::UnnamedLiteral { literal: lhs }),
+                        right: Box::new(rhs),
+                    }))
+                }
                 _ => {
                     return Err("unexpected operand type".to_string());
                 }
             },
             ReturnResult::Tensor(lhs) => match right {
                 ReturnResult::Tensor(rhs) => return Ok(ReturnResult::Tensor(lhs - rhs)),
+                ReturnResult::Symbolic(rhs) => {
+                    return Ok(ReturnResult::Symbolic(SymbolicExpr::BinaryOp {
+                        op: "-".to_string(),
+                        left: Box::new(SymbolicExpr::UnnamedTensor { tensor: lhs }),
+                        right: Box::new(rhs),
+                    }))
+                }
                 _ => return Err("unexpected operand type".to_string()),
+            },
+            ReturnResult::Symbolic(lhs) => match right {
+                ReturnResult::Tensor(rhs) => {
+                    return Ok(ReturnResult::Symbolic(SymbolicExpr::BinaryOp {
+                        op: "-".to_string(),
+                        left: Box::new(lhs),
+                        right: Box::new(SymbolicExpr::UnnamedTensor { tensor: rhs }),
+                    }));
+                }
+                ReturnResult::Literal(rhs) => {
+                    return Ok(ReturnResult::Symbolic(SymbolicExpr::BinaryOp {
+                        op: "-".to_string(),
+                        left: Box::new(lhs),
+                        right: Box::new(SymbolicExpr::UnnamedLiteral { literal: rhs }),
+                    }));
+                }
+                ReturnResult::Symbolic(rhs) => {
+                    return Ok(ReturnResult::Symbolic(SymbolicExpr::BinaryOp {
+                        op: "-".to_string(),
+                        left: Box::new(lhs),
+                        right: Box::new(rhs),
+                    }));
+                }
+                _ => {
+                    return Err("unexpected operand type".to_string());
+                }
             },
             _ => return Err("unexpected operand type".to_string()),
         }
@@ -277,6 +359,13 @@ impl Dispatcher {
                 ReturnResult::Tensor(rhs) => {
                     return Ok(ReturnResult::Tensor(rhs.scalar_multiply(lhs)));
                 }
+                ReturnResult::Symbolic(rhs) => {
+                    return Ok(ReturnResult::Symbolic(SymbolicExpr::BinaryOp {
+                        op: "*".to_string(),
+                        left: Box::new(SymbolicExpr::UnnamedLiteral { literal: lhs }),
+                        right: Box::new(rhs),
+                    }))
+                }
                 _ => return Err("unexpected operand type".to_string()),
             },
             ReturnResult::Tensor(lhs) => match right {
@@ -286,7 +375,40 @@ impl Dispatcher {
                 ReturnResult::Tensor(rhs) => {
                     return Ok(ReturnResult::Tensor(lhs.outer_product(&rhs)))
                 }
+                ReturnResult::Symbolic(rhs) => {
+                    return Ok(ReturnResult::Symbolic(SymbolicExpr::BinaryOp {
+                        op: "*".to_string(),
+                        left: Box::new(SymbolicExpr::UnnamedTensor { tensor: lhs }),
+                        right: Box::new(rhs),
+                    }))
+                }
                 _ => return Err("unexpected operand type".to_string()),
+            },
+            ReturnResult::Symbolic(lhs) => match right {
+                ReturnResult::Tensor(rhs) => {
+                    return Ok(ReturnResult::Symbolic(SymbolicExpr::BinaryOp {
+                        op: "*".to_string(),
+                        left: Box::new(lhs),
+                        right: Box::new(SymbolicExpr::UnnamedTensor { tensor: rhs }),
+                    }));
+                }
+                ReturnResult::Literal(rhs) => {
+                    return Ok(ReturnResult::Symbolic(SymbolicExpr::BinaryOp {
+                        op: "*".to_string(),
+                        left: Box::new(lhs),
+                        right: Box::new(SymbolicExpr::UnnamedLiteral { literal: rhs }),
+                    }));
+                }
+                ReturnResult::Symbolic(rhs) => {
+                    return Ok(ReturnResult::Symbolic(SymbolicExpr::BinaryOp {
+                        op: "*".to_string(),
+                        left: Box::new(lhs),
+                        right: Box::new(rhs),
+                    }));
+                }
+                _ => {
+                    return Err("unexpected operand type".to_string());
+                }
             },
             _ => {}
         }
@@ -303,6 +425,36 @@ impl Dispatcher {
             ReturnResult::Literal(lhs) => match right {
                 ReturnResult::Literal(rhs) => {
                     return Ok(ReturnResult::Literal(lhs / rhs));
+                }
+                ReturnResult::Symbolic(rhs) => {
+                    return Ok(ReturnResult::Symbolic(SymbolicExpr::BinaryOp {
+                        op: "/".to_string(),
+                        left: Box::new(SymbolicExpr::UnnamedLiteral { literal: lhs }),
+                        right: Box::new(rhs),
+                    }))
+                }
+                _ => {
+                    return Err("unexpected operand type".to_string());
+                }
+            },
+
+            ReturnResult::Symbolic(lhs) => match right {
+                ReturnResult::Tensor(_) => {
+                    return Err("Tensor division is not supported".to_string());
+                }
+                ReturnResult::Literal(rhs) => {
+                    return Ok(ReturnResult::Symbolic(SymbolicExpr::BinaryOp {
+                        op: "/".to_string(),
+                        left: Box::new(lhs),
+                        right: Box::new(SymbolicExpr::UnnamedLiteral { literal: rhs }),
+                    }));
+                }
+                ReturnResult::Symbolic(rhs) => {
+                    return Ok(ReturnResult::Symbolic(SymbolicExpr::BinaryOp {
+                        op: "/".to_string(),
+                        left: Box::new(lhs),
+                        right: Box::new(rhs),
+                    }));
                 }
                 _ => {
                     return Err("unexpected operand type".to_string());
@@ -323,7 +475,15 @@ impl Dispatcher {
             ReturnResult::Literal(_) => {
                 return Ok(ReturnResult::Literal(0.0));
             }
-            // TODO: handle identifiers
+            ReturnResult::Symbolic(t) => {
+                let mut ev_args = Vec::<SymbolicExpr>::new();
+                ev_args.push(t.clone());
+                let res = SymbolicExpr::FunctionCall {
+                    name: "rank".to_string(),
+                    args: ev_args,
+                };
+                return Ok(ReturnResult::Symbolic(res));
+            }
             _ => {
                 return Err(format!("invalid argument: {:?}", args[0]));
             }
@@ -339,6 +499,15 @@ impl Dispatcher {
             ReturnResult::Tensor(t) => {
                 return Ok(ReturnResult::TensorShape(t.shape()));
             }
+            ReturnResult::Symbolic(t) => {
+                let mut ev_args = Vec::<SymbolicExpr>::new();
+                ev_args.push(t.clone());
+                let res = SymbolicExpr::FunctionCall {
+                    name: "shape".to_string(),
+                    args: ev_args,
+                };
+                return Ok(ReturnResult::Symbolic(res));
+            }
             ReturnResult::Literal(_) => {
                 return Ok(ReturnResult::TensorShape(Vec::new()));
             }
@@ -348,7 +517,6 @@ impl Dispatcher {
         }
     }
 
-    // NOTE: index call might be special -- we might not to lookup its identifier until here
     fn process_index_call(&self, args: Vec<ReturnResult>) -> Result<ReturnResult, String> {
         if args.len() < 1 {
             return Err("no arguments provided".to_string());
@@ -367,6 +535,23 @@ impl Dispatcher {
                 let idx = Idx::new(&index);
                 return Ok(ReturnResult::Literal(t[idx]));
             }
+            ReturnResult::Symbolic(t) => {
+                let mut res = Vec::<SymbolicExpr>::new();
+                res.push(t.clone());
+                for i in 1..args.len() {
+                    match args[i] {
+                        ReturnResult::Literal(f) => {
+                            res.push(SymbolicExpr::UnnamedLiteral { literal: f })
+                        }
+
+                        _ => return Err(format!("invalid argument: {:?}", args[i])),
+                    }
+                }
+                return Ok(ReturnResult::Symbolic(SymbolicExpr::FunctionCall {
+                    name: "index".to_string(),
+                    args: res,
+                }));
+            }
             _ => {
                 return Err(format!("argument should be a tensor"));
             }
@@ -382,6 +567,41 @@ impl Dispatcher {
             ReturnResult::Tensor(t) => match &args[1] {
                 ReturnResult::Tensor(p) => {
                     return Ok(ReturnResult::Tensor(t.outer_product(p)));
+                }
+                ReturnResult::Symbolic(p) => {
+                    let mut ev_args = Vec::<SymbolicExpr>::new();
+                    ev_args.push(SymbolicExpr::UnnamedTensor { tensor: t.clone() });
+                    ev_args.push(p.clone());
+                    let res = SymbolicExpr::FunctionCall {
+                        name: "outer".to_string(),
+                        args: ev_args,
+                    };
+                    return Ok(ReturnResult::Symbolic(res));
+                }
+                _ => {
+                    return Err(format!("invalid argument: {:?}", args[0]));
+                }
+            },
+            ReturnResult::Symbolic(t) => match &args[1] {
+                ReturnResult::Tensor(p) => {
+                    let mut ev_args = Vec::<SymbolicExpr>::new();
+                    ev_args.push(t.clone());
+                    ev_args.push(SymbolicExpr::UnnamedTensor { tensor: p.clone() });
+                    let res = SymbolicExpr::FunctionCall {
+                        name: "outer".to_string(),
+                        args: ev_args,
+                    };
+                    return Ok(ReturnResult::Symbolic(res));
+                }
+                ReturnResult::Symbolic(p) => {
+                    let mut ev_args = Vec::<SymbolicExpr>::new();
+                    ev_args.push(t.clone());
+                    ev_args.push(p.clone());
+                    let res = SymbolicExpr::FunctionCall {
+                        name: "outer".to_string(),
+                        args: ev_args,
+                    };
+                    return Ok(ReturnResult::Symbolic(res));
                 }
                 _ => {
                     return Err(format!("invalid argument: {:?}", args[0]));
@@ -402,6 +622,42 @@ impl Dispatcher {
                 ReturnResult::Tensor(p) => {
                     return Ok(ReturnResult::Literal(t.inner_product(p)));
                 }
+                ReturnResult::Symbolic(p) => {
+                    let mut ev_args = Vec::<SymbolicExpr>::new();
+                    ev_args.push(SymbolicExpr::UnnamedTensor { tensor: t.clone() });
+                    ev_args.push(p.clone());
+                    let res = SymbolicExpr::FunctionCall {
+                        name: "inner".to_string(),
+                        args: ev_args,
+                    };
+                    return Ok(ReturnResult::Symbolic(res));
+                }
+                _ => {
+                    return Err(format!("invalid argument: {:?}", args[0]));
+                }
+            },
+
+            ReturnResult::Symbolic(t) => match &args[1] {
+                ReturnResult::Tensor(p) => {
+                    let mut ev_args = Vec::<SymbolicExpr>::new();
+                    ev_args.push(t.clone());
+                    ev_args.push(SymbolicExpr::UnnamedTensor { tensor: p.clone() });
+                    let res = SymbolicExpr::FunctionCall {
+                        name: "inner".to_string(),
+                        args: ev_args,
+                    };
+                    return Ok(ReturnResult::Symbolic(res));
+                }
+                ReturnResult::Symbolic(p) => {
+                    let mut ev_args = Vec::<SymbolicExpr>::new();
+                    ev_args.push(t.clone());
+                    ev_args.push(p.clone());
+                    let res = SymbolicExpr::FunctionCall {
+                        name: "inner".to_string(),
+                        args: ev_args,
+                    };
+                    return Ok(ReturnResult::Symbolic(res));
+                }
                 _ => {
                     return Err(format!("invalid argument: {:?}", args[0]));
                 }
@@ -421,12 +677,21 @@ impl Dispatcher {
             ReturnResult::Tensor(t) => {
                 return Ok(ReturnResult::Tensor(t.tensor_transpose()));
             }
+            ReturnResult::Symbolic(t) => {
+                let mut ev_args = Vec::<SymbolicExpr>::new();
+                ev_args.push(t.clone());
+                let res = SymbolicExpr::FunctionCall {
+                    name: "transpose".to_string(),
+                    args: ev_args,
+                };
+                return Ok(ReturnResult::Symbolic(res));
+            }
             _ => {
                 return Err(format!("invalid argument: {:?}", args[0]));
             }
         }
     }
-    
+
     fn process_hosvd(&self, args: Vec<ReturnResult>) -> Result<ReturnResult, String> {
         if args.len() != 1 {
             return Err("hosvd accepts only 1 argument".to_string());
@@ -436,10 +701,27 @@ impl Dispatcher {
                 t.hosvd();
                 return Ok(ReturnResult::Nothing);
             }
+
+            ReturnResult::Symbolic(t) => {
+                let mut ev_args = Vec::<SymbolicExpr>::new();
+                ev_args.push(t.clone());
+                let res = SymbolicExpr::FunctionCall {
+                    name: "hosvd".to_string(),
+                    args: ev_args,
+                };
+                return Ok(ReturnResult::Symbolic(res));
+            }
             _ => {
                 return Err(format!("invalid argument: {:?}", args[0]));
             }
         }
     }
-}
 
+    // TODO: add function to evaluate symbols
+    // the idea is that given arguments (SymbolicExpr,  arg1, ..., argN) we substitute each symbol in SymbolicExpr by arg in order
+    // for example evaluate(A+B, a, b) should be the same as a+b
+    // 
+    fn evaluate_symbolic(&self, args: Vec<ReturnResult>) -> Result<ReturnResult, String> {
+        unimplemented!()
+    }
+}
