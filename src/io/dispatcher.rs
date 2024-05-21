@@ -66,7 +66,7 @@ impl Dispatcher {
     }
 
     // this is inner implementation of process_expr for non-base calls
-    fn process_expr_inner(&self, expr: &Expr) -> Result<ReturnResult, String> {
+    fn process_expr_inner(&mut self, expr: &Expr) -> Result<ReturnResult, String> {
         match &expr {
             Expr::Identifier(s) => {
                 let val = self.storage.get(s);
@@ -150,7 +150,7 @@ impl Dispatcher {
         }
     }
 
-    fn process_fn_call(&self, expr: &Expr) -> Result<ReturnResult, String> {
+    fn process_fn_call(&mut self, expr: &Expr) -> Result<ReturnResult, String> {
         match expr {
             Expr::FunctionCall { name, args } => {
                 // we support following functions
@@ -194,7 +194,7 @@ impl Dispatcher {
         Ok(ReturnResult::Nothing)
     }
 
-    fn process_binary_op(&self, expr: &Expr) -> Result<ReturnResult, String> {
+    fn process_binary_op(&mut self, expr: &Expr) -> Result<ReturnResult, String> {
         match expr {
             Expr::BinaryOp { op, left, right } => {
                 // we support following binary ops
@@ -721,7 +721,137 @@ impl Dispatcher {
     // the idea is that given arguments (SymbolicExpr,  arg1, ..., argN) we substitute each symbol in SymbolicExpr by arg in order
     // for example evaluate(A+B, a, b) should be the same as a+b
     // 
-    fn evaluate_symbolic(&self, args: Vec<ReturnResult>) -> Result<ReturnResult, String> {
-        unimplemented!()
+    fn evaluate_symbolic(&mut self, args: Vec<ReturnResult>) -> Result<ReturnResult, String> {
+        
+        if args.len() <= 1 {
+            return Err("evaluate expects at least 2 arguments".to_string());
+        }
+        match &args[0] {
+            ReturnResult::Symbolic(expr) => {
+                let mut args_idx: usize = 1;
+                match expr {
+                    SymbolicExpr::Symbol(symbol) => {
+                        self.storage.insert(symbol.clone(), args[1].clone());
+                        return Ok(args[1].clone());
+                    }
+                    
+                    SymbolicExpr::BinaryOp { op, left, right } => {
+                        // we have to evaluate left and right
+                        let left = self.evaluate_symbolic_impl(left, &mut args_idx, &args)?;
+                        let right = self.evaluate_symbolic_impl(right, &mut args_idx, &args)?;
+                        if op == "+" {
+                            return self.process_addition(left, right);
+                        } else if op == "-" {
+                            return self.process_subtraction(left, right);
+                        } else if op == "*" {
+                            return self.process_multiplication(left, right);
+                        } else if op == "/" {
+                            return self.process_division(left, right);
+                        } else {
+                            return Err(format!("operation {:?} is not recognized", op));
+                        }
+                    }
+                    SymbolicExpr::FunctionCall { name, args: params } => {
+                        // we have to evaluate args
+                        let mut evaluated = Vec::new();
+                        for i in 0..params.len() {
+                            evaluated.push(self.evaluate_symbolic_impl(&params[i], &mut args_idx, &args)?);
+                        }
+                        if name == "evaluate" {
+                            return Err("recursive call of evaluate detected, aborting".to_string());
+                        }
+                        // call function here
+                        if name == "rank" {
+                            return self.process_rank_call(evaluated);
+                        } else if name == "shape" {
+                            return self.process_shape_call(evaluated);
+                        } else if name == "index" {
+                            return self.process_index_call(evaluated);
+                        } else if name == "outer" {
+                            return self.process_outer_call(evaluated);
+                        } else if name == "inner" {
+                            return self.process_inner_call(evaluated);
+                        } else if name == "transpose" {
+                            return self.process_transpose_call(evaluated);
+                        } else if name == "hosvd" {
+                            return self.process_hosvd(evaluated);
+                        }  else {
+                            return Err(format!("function {:?} is not recognized", name));
+                        }
+                    }
+                    _ => {
+                        return Err(format!("invalid argument to evaluate: {:?}", expr))
+                    }
+                }
+            }
+            _ => {
+                return Err(format!("cannot evaluate: {:?}", args[0]));
+            }
+        }
+        
+        
+        return Ok(ReturnResult::Nothing);
+    }
+    
+    
+    fn evaluate_symbolic_impl(&self, expr: &SymbolicExpr, args_idx: &mut usize, args: &Vec<ReturnResult>) -> Result<ReturnResult, String> {
+        if *args_idx > args.len() {
+            return Err("too many arguments to evaluate".to_string())
+        }
+        match expr {
+            SymbolicExpr::Symbol(_) => {
+                
+                *args_idx += 1;
+                return Ok(args[*args_idx-1].clone());
+            }
+            SymbolicExpr::BinaryOp { op, left, right } => {
+                let left = self.evaluate_symbolic_impl(left, args_idx, &args)?;
+                let right = self.evaluate_symbolic_impl(right, args_idx, &args)?;
+                if op == "+" {
+                    return self.process_addition(left, right);
+                } else if op == "-" {
+                    return self.process_subtraction(left, right);
+                } else if op == "*" {
+                    return self.process_multiplication(left, right);
+                } else if op == "/" {
+                    return self.process_division(left, right);
+                } else {
+                    return Err(format!("operation {:?} is not recognized", op));
+                }
+            }
+            SymbolicExpr::FunctionCall { name, args: params } => {
+                // we have to evaluate args
+                let mut evaluated = Vec::new();
+                for i in 0..params.len() {
+                    evaluated.push(self.evaluate_symbolic_impl(&params[i], args_idx, &args)?);
+                }
+                if name == "evaluate" {
+                    return Err("recursive call of evaluate detected, aborting".to_string());
+                }
+                // call function here
+                if name == "rank" {
+                    return self.process_rank_call(evaluated);
+                } else if name == "shape" {
+                    return self.process_shape_call(evaluated);
+                } else if name == "index" {
+                    return self.process_index_call(evaluated);
+                } else if name == "outer" {
+                    return self.process_outer_call(evaluated);
+                } else if name == "inner" {
+                    return self.process_inner_call(evaluated);
+                } else if name == "transpose" {
+                    return self.process_transpose_call(evaluated);
+                } else if name == "hosvd" {
+                    return self.process_hosvd(evaluated);
+                }  else {
+                    return Err(format!("function {:?} is not recognized", name));
+                }
+            }
+            _ => {
+                return Err(format!("invalid argument to evaluate: {:?}", expr))
+            }
+        }    
+        
+        return Ok(ReturnResult::Nothing)
     }
 }

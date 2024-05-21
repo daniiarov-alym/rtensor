@@ -409,6 +409,7 @@ impl Parser {
                     args.push(expr);
                     self.advance()
                     // TODO here we need to check that next token is not (
+                    // if it is ( then it might be function call inside function call
                 }
                 Token::Literal(f) => {
                     comma_closed = true;
