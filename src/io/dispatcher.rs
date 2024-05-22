@@ -812,9 +812,9 @@ impl Dispatcher {
                         for i in 0..params.len() {
                             evaluated.push(self.evaluate_symbolic_impl(&params[i], &mut args_idx, &args)?);
                         }
-                        if name == "evaluate" {
+                        /*if name == "evaluate" {
                             return Err("recursive call of evaluate detected, aborting".to_string());
-                        }
+                        }*/
                         // call function here
                         if name == "rank" {
                             return self.process_rank_call(evaluated);
@@ -831,6 +831,8 @@ impl Dispatcher {
                         } else if name == "hosvd" {
                             return self.process_hosvd(evaluated);
                         } else if name == "solve" {
+                            return self.process_solve(evaluated);
+                        } else if name == "evaluate" {
                             return self.process_solve(evaluated);
                         } else {
                             return Err(format!("function {:?} is not recognized", name));
@@ -880,9 +882,9 @@ impl Dispatcher {
                 for i in 0..params.len() {
                     evaluated.push(self.evaluate_symbolic_impl(&params[i], args_idx, &args)?);
                 }
-                if name == "evaluate" {
+                /*if name == "evaluate" {
                     return Err("recursive call of evaluate detected, aborting".to_string());
-                }
+                }*/
                 // call function here
                 if name == "rank" {
                     return self.process_rank_call(evaluated);
@@ -899,6 +901,8 @@ impl Dispatcher {
                 } else if name == "hosvd" {
                     return self.process_hosvd(evaluated);
                 } else if name == "solve" {
+                    return self.process_solve(evaluated);
+                } else if name == "evaluate" {
                     return self.process_solve(evaluated);
                 } else {
                     return Err(format!("function {:?} is not recognized", name));
