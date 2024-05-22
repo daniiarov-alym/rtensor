@@ -182,6 +182,8 @@ impl Dispatcher {
                     return self.process_hosvd(evaluated);
                 } else if name == "evaluate" {
                     return self.evaluate_symbolic(evaluated);
+                } else if name == "solve" {
+                    return self.process_solve(evaluated);
                 } else {
                     return Err(format!("function {:?} is not recognized", name));
                 }
@@ -714,6 +716,62 @@ impl Dispatcher {
             }
         }
     }
+    
+    fn process_solve(&self, args: Vec<ReturnResult>) -> Result<ReturnResult, String> {
+        if args.len() != 2 {
+            return Err("solve accepts exactly two arguments".to_string());
+        }
+        match &args[0] {
+            ReturnResult::Tensor(t) => match &args[1] {
+                ReturnResult::Tensor(b) => {
+                    return Ok(ReturnResult::Tensor(t.solve_matrix_vector_equation(b)?));
+                }
+                ReturnResult::Symbolic(b) => {
+                    let mut ev_args = Vec::<SymbolicExpr>::new();
+                    ev_args.push(SymbolicExpr::UnnamedTensor { tensor: t.clone()});
+                    ev_args.push(b.clone());
+                    let res = SymbolicExpr::FunctionCall {
+                        name: "solve".to_string(),
+                        args: ev_args,
+                    };
+                    return Ok(ReturnResult::Symbolic(res));
+                }
+                _ => {
+                    return Err(format!("invalid argument: {:?}", args[0]));
+                }
+            }
+            ReturnResult::Symbolic(t) =>  match &args[1] {
+                ReturnResult::Tensor(b) => {
+                    let mut ev_args = Vec::<SymbolicExpr>::new();
+                    ev_args.push(t.clone());
+                    ev_args.push(SymbolicExpr::UnnamedTensor { tensor: b.clone()});
+                    let res = SymbolicExpr::FunctionCall {
+                        name: "solve".to_string(),
+                        args: ev_args,
+                    };
+                    return Ok(ReturnResult::Symbolic(res));
+                }
+                ReturnResult::Symbolic(b) => {
+                    let mut ev_args = Vec::<SymbolicExpr>::new();
+                    ev_args.push(t.clone());
+                    ev_args.push(b.clone());
+                    let res = SymbolicExpr::FunctionCall {
+                        name: "solve".to_string(),
+                        args: ev_args,
+                    };
+                    return Ok(ReturnResult::Symbolic(res));
+                }
+                _ => {
+                    return Err(format!("invalid argument: {:?}", args[0]));
+                }
+            }
+            _ => {
+                return Err(format!("invalid argument: {:?}", args[0]));
+            }
+        }
+        
+        Ok(ReturnResult::Nothing)
+    }
 
     // TODO: add function to evaluate symbols
     // the idea is that given arguments (SymbolicExpr,  arg1, ..., argN) we substitute each symbol in SymbolicExpr by arg in order
@@ -772,7 +830,9 @@ impl Dispatcher {
                             return self.process_transpose_call(evaluated);
                         } else if name == "hosvd" {
                             return self.process_hosvd(evaluated);
-                        }  else {
+                        } else if name == "solve" {
+                            return self.process_solve(evaluated);
+                        } else {
                             return Err(format!("function {:?} is not recognized", name));
                         }
                     }
@@ -838,7 +898,9 @@ impl Dispatcher {
                     return self.process_transpose_call(evaluated);
                 } else if name == "hosvd" {
                     return self.process_hosvd(evaluated);
-                }  else {
+                } else if name == "solve" {
+                    return self.process_solve(evaluated);
+                } else {
                     return Err(format!("function {:?} is not recognized", name));
                 }
             }

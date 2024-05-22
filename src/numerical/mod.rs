@@ -1,7 +1,7 @@
 use std::vec;
 
-use crate::core::datatypes::Tensor;
-use nalgebra::DMatrix;
+use crate::core::datatypes::{Tensor, Idx};
+use nalgebra::{ComplexField, DMatrix};
 
 impl Tensor {
     // NOTE: seems like here is an error
@@ -126,4 +126,86 @@ impl Tensor {
         unimplemented!()
         // compute core tensor S with multilinear multiplication S = A x U_1^H x ... x U_m^h
     }
+    
+    // Given self is tensor of shape (n,m), i.e. matrix and b be the tensor of shape (n)  i.e. vector, might be column one
+    // This function solves matrix equation self * x = b and returns tensor of shape (n)
+    pub fn solve_matrix_vector_equation(&self, b: &Tensor) -> Result<Tensor, String> {
+        if self.rank() != 2 {
+            return Err("not a matrix given".to_string());
+        }
+        if b.rank() != 1 {
+            return Err("not a vector given".to_string());
+        }
+        let self_shape = self.shape();
+        let b_shape = b.shape();
+        if self_shape[0] > b_shape[0] {
+            return Err("matrix has more rows than (column) vector, consistent solution is unavailable".to_string());
+        }
+        if self_shape[0] < b_shape[0] {
+            return Err("matrix has less rows than (column) vector, consistent solution is unavailable".to_string());
+        }
+        if self_shape[0] != self_shape[1] {
+            return Err("matrix is not square matrix, consistent solution is unavailable".to_string());
+        }
+        
+        let mut a_matrix = self.clone();
+        let mut b_vector = b.clone();
+        
+        let mut h = 0 as usize;
+        let mut k = 0 as usize;
+        
+        let argmax_along_rows = |matrix: &mut Tensor, start: usize, column: usize| -> usize {
+            let mut i_max = start;
+            for i in start..self_shape[0] {
+                if matrix[Idx::new(&vec![i, column])].abs() > matrix[Idx::new(&vec![i_max, column])].abs() {
+                    i_max = i;
+                }
+            }
+            i_max
+        };
+        
+        let swap_rows = |matrix: &mut Tensor, a: usize, b: usize| {
+            for k in 0..self_shape[1] {
+                (matrix[Idx::new(&vec![a, k])], matrix[Idx::new(&vec![b, k])]) = (matrix[Idx::new(&vec![b, k])], matrix[Idx::new(&vec![a, k])])
+            }
+        };
+        
+        let epsilon = 1e-9;
+        while h < self_shape[0] && k < self_shape[1] {
+            let i_max = argmax_along_rows(&mut a_matrix, h, k);
+            if a_matrix[Idx::new(&vec![i_max, k])].abs() < epsilon {
+                k += 1;
+            } else {
+                swap_rows(&mut a_matrix, h, i_max); // we then have to swap corresponding rows in b vector
+                (b_vector[Idx::new(&vec![h])], b_vector[Idx::new(&vec![i_max])]) = (b_vector[Idx::new(&vec![i_max])], b_vector[Idx::new(&vec![h])]); 
+                for i in h+1..self_shape[0] {
+                    let factor = a_matrix[Idx::new(&vec![i, k])]/a_matrix[Idx::new(&vec![h, k])];
+                    a_matrix[Idx::new(&vec![i, k])] = 0.0;
+                    for j in k+1..self_shape[1] {
+                        a_matrix[Idx::new(&vec![i, j])] -= a_matrix[Idx::new(&vec![h, j])] * factor;
+                    }
+                    b_vector[Idx::new(&vec![i])] -=  b_vector[Idx::new(&vec![h])]  * factor;
+                }
+                h += 1;
+                k += 1;
+            }
+        }
+        
+        // now we reconstruct solution
+        let mut result_tensor = Tensor::new(Idx::new(&vec![self_shape[0]]));
+        
+        result_tensor[Idx::new(&vec![self_shape[0]-1])] = b_vector[Idx::new(&vec![self_shape[0]-1])]/a_matrix[Idx::new(&vec![self_shape[0]-1, self_shape[1]-1])];
+        
+        for i in (0..self_shape[0]-1).rev() {
+            let mut sum = 0.0;
+            for j in i+1..self_shape[1] {
+                sum += a_matrix[Idx::new(&vec![i, j])] * result_tensor[Idx::new(&vec![j])];
+            }
+            result_tensor[Idx::new(&vec![i])] = (b_vector[Idx::new(&vec![i])] - sum)/a_matrix[Idx::new(&vec![i,i])];
+        }
+        
+        // we might restore then order of variables
+        Ok(result_tensor)
+    }
+    
 }
