@@ -720,7 +720,6 @@ impl Dispatcher {
     // for example evaluate(A+B, a, b) should be the same as a+b
     // 
     fn evaluate_symbolic(&mut self, args: Vec<ReturnResult>) -> Result<ReturnResult, String> {
-        
         if args.len() <= 1 {
             return Err("evaluate expects at least 2 arguments".to_string());
         }
@@ -778,7 +777,7 @@ impl Dispatcher {
                         }
                     }
                     _ => {
-                        return Err(format!("invalid argument to evaluate: {:?}", expr))
+                        return Err(format!("line invalid argument to evaluate: {:?}", expr))
                     }
                 }
             }
@@ -843,8 +842,13 @@ impl Dispatcher {
                     return Err(format!("function {:?} is not recognized", name));
                 }
             }
-            _ => {
-                return Err(format!("invalid argument to evaluate: {:?}", expr))
+            
+            SymbolicExpr::UnnamedLiteral { literal } => {
+                return Ok(ReturnResult::Literal(*literal));
+            }
+            
+            SymbolicExpr::UnnamedTensor { tensor }  => {
+                return Ok(ReturnResult::Tensor(tensor.clone()));
             }
         }    
     }
