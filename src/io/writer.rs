@@ -1,23 +1,42 @@
+use std::error::Error;
 use std::io;
 use std::io::Write;
+use std::fs::File;
 
 use crate::symbolic::SymbolicExpr;
 
 use super::dispatcher::ReturnResult;
-pub struct Writer {}
+pub struct Writer {
+    file: Option<File>
+}
 
 impl Writer {
     pub fn new() -> Self {
-        Writer {}
+        Writer {
+            file: None
+        }
     }
 
+    pub fn new_with_file(filename: String) -> Result<Self, Box<dyn Error>> {
+        let file = File::create(filename)?;
+        Ok(Writer{
+            file: Some(file)
+        })
+    }
+    
     pub fn prompt(&mut self) {
         print!("> ");
         io::stdout().flush().unwrap();
     }
 
     pub fn write_output(&mut self, output: &str) -> Result<(), io::Error> {
-        println!("{}", output);
+        match &mut self.file {
+            None => println!("{}", output),
+            Some(file) => { 
+                file.write(output.as_bytes())?;
+                file.write("\n".as_bytes())?;
+            }
+        }
         Ok(())
     }
 
@@ -25,13 +44,13 @@ impl Writer {
         match r {
             ReturnResult::Nothing => return Ok(()),
             ReturnResult::Tensor(t) => {
-                println!("{}", t);
+                let _ = self.write_output(&format!("{}", t));
             }
             ReturnResult::Literal(f) => {
-                println!("{}", f);
+                let _ = self.write_output(&format!("{}", f));
             }
             ReturnResult::TensorShape(s) => {
-                println!("{:?}", s);
+                let _ = self.write_output(&format!("{:?}", s));
             }
             ReturnResult::Symbolic(expr) => {
                 self.format_symbolic(expr);
@@ -43,7 +62,7 @@ impl Writer {
     fn format_symbolic(&mut self, expr: SymbolicExpr) {
         let mut res = String::new();
         self.format_symbolic_impl(&expr, &mut res);
-        println!("{}", res)
+        let _ = self.write_output(&format!("{}", res));
     }
 
     fn format_symbolic_impl(&mut self, expr: &SymbolicExpr, out: &mut String) {

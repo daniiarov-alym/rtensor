@@ -60,12 +60,19 @@ fn main() {
         args_idx += 1;
     }
     
+    if verbose && file_output {
+        println!("verbose mode does not work with file output, ignoring verbose");
+        verbose = false;
+    }
     
     let mut reader = reader::Reader::new();
     if file_input {
         reader = reader::Reader::new_with_file(input_filename).unwrap();
     }
     let mut writer = writer::Writer::new();
+    if file_output {
+        writer = writer::Writer::new_with_file(output_filename).unwrap();
+    }
     let mut dispatcher = io::dispatcher::Dispatcher::new();
     loop {
         if write_prompt {
@@ -88,7 +95,7 @@ fn main() {
                         if verbose {
                             let _ = writer.write_output(&format!("AST: {:?}", expr));
                         }
-                        let result = dispatcher.process_expr(expr);
+                        let result = dispatcher.process_expr(expr, verbose);
                         if let Err(e) = &result {
                             println!("Error: {}", e);
                             continue;

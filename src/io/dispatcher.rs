@@ -25,7 +25,7 @@ impl Dispatcher {
         }
     }
 
-    pub fn process_expr(&mut self, expr: Expr) -> Result<ReturnResult, String> {
+    pub fn process_expr(&mut self, expr: Expr, verbose: bool) -> Result<ReturnResult, String> {
         // this is base start process
         match &expr {
             Expr::Identifier(s) => {
