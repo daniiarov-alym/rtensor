@@ -184,6 +184,9 @@ impl Dispatcher {
                     return self.evaluate_symbolic(evaluated);
                 } else if name == "solve" {
                     return self.process_solve(evaluated);
+                } else if name == "reset" {
+                    self.reset();
+                    return Ok(ReturnResult::Nothing);
                 } else {
                     return Err(format!("function {:?} is not recognized", name));
                 }
@@ -919,5 +922,9 @@ impl Dispatcher {
                 return Ok(ReturnResult::Tensor(tensor.clone()));
             }
         }    
+    }
+    
+    fn reset(&mut self) {
+        self.storage.clear();
     }
 }
