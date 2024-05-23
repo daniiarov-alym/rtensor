@@ -786,7 +786,6 @@ impl Dispatcher {
                 let mut args_idx: usize = 1;
                 match expr {
                     SymbolicExpr::Symbol(symbol) => {
-                        self.storage.insert(symbol.clone(), args[1].clone());
                         return Ok(args[1].clone());
                     }
                     
