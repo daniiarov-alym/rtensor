@@ -856,9 +856,12 @@ impl Dispatcher {
             return Err("too many arguments to evaluate".to_string())
         }
         match expr {
-            SymbolicExpr::Symbol(_) => {
+            SymbolicExpr::Symbol(s) => {
                 
                 *args_idx += 1;
+                if (*args_idx > args.len()) {
+                    return Ok(ReturnResult::Symbolic(SymbolicExpr::Symbol(s.clone())));
+                }
                 return Ok(args[*args_idx-1].clone());
             }
             SymbolicExpr::BinaryOp { op, left, right } => {

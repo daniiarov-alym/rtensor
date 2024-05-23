@@ -109,6 +109,9 @@ fn main() {
                             let _ = writer.write_output(&format!("Error: {}", e));
                             continue;
                         }
+                        if verbose {
+                            let _ = writer.write_output(&format!("{:?}", result));
+                        }
                         let result = result.unwrap();
                         let _ = writer.write_return_result(result);
                     }
