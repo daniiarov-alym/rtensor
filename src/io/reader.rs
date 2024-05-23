@@ -1,13 +1,44 @@
-use std::io;
-
-pub struct Reader {}
+use std::error::Error;
+use std::fs::File;
+use std::io::{self, BufRead, BufReader, Lines};
+use std::path::Path;
+pub struct Reader {
+    lines: Option<Lines<BufReader<File>>>
+}
 
 impl Reader {
     pub fn new() -> Self {
-        Self {}
+        Self {lines: None}
+    }
+    
+    pub fn new_with_file(filename: String) -> Result<Self, Box<dyn Error>> {
+        let lines = read_lines(filename)?;
+        Ok(Self{
+            lines: Some(lines)
+        })
     }
 
-    pub fn read_input(&mut self) -> Result<String, &'static str> {
+    fn read_input_file(&mut self) -> Result<String, String> {
+        let next_line = self.lines.as_mut().unwrap().next();
+        if next_line.is_none() {
+            return Ok(String::new());
+        }
+        let next_line = next_line.unwrap();
+        match next_line {
+            Ok(s) => {
+                return Ok(s)
+            }
+            Err(e) => {
+                return Err(format!("{}",e));
+            }
+        }
+    }
+    
+    pub fn read_input(&mut self) -> Result<String, String> {
+        
+        if self.lines.is_some() {
+            return self.read_input_file();
+        }
         let mut input = String::new();
         match io::stdin().read_line(&mut input) {
             Ok(0) => Ok(String::new()),
@@ -15,10 +46,10 @@ impl Reader {
                 let trimmed_input = input.trim().to_string();
                 match self.validate(&trimmed_input) {
                     Ok(()) => Ok(trimmed_input),
-                    Err(err_msg) => Err(err_msg),
+                    Err(err_msg) => Err(err_msg.to_string()),
                 }
             }
-            Err(_) => Err("Failed to read input"),
+            Err(_) => Err("Failed to read input".to_string()),
         }
     }
 
@@ -29,4 +60,10 @@ impl Reader {
             Ok(())
         }
     }
+}
+
+fn read_lines<P>(filename: P) -> io::Result<io::Lines<io::BufReader<File>>>
+where P: AsRef<Path>, {
+    let file = File::open(filename)?;
+    Ok(io::BufReader::new(file).lines())
 }
