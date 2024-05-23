@@ -26,6 +26,9 @@ impl Reader {
         let next_line = next_line.unwrap();
         match next_line {
             Ok(s) => {
+                if (s.is_empty()) {
+                    return Ok(" ".to_string());
+                }
                 return Ok(s)
             }
             Err(e) => {
