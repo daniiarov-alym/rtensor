@@ -169,13 +169,14 @@ impl Tensor {
                 (matrix[Idx::new(&vec![a, k])], matrix[Idx::new(&vec![b, k])]) = (matrix[Idx::new(&vec![b, k])], matrix[Idx::new(&vec![a, k])])
             }
         };
-        
+        let mut swaps: Vec<(usize, usize)> = Vec::new();
         let epsilon = 1e-9;
         while h < self_shape[0] && k < self_shape[1] {
             let i_max = argmax_along_rows(&mut a_matrix, h, k);
             if a_matrix[Idx::new(&vec![i_max, k])].abs() < epsilon {
                 k += 1;
             } else {
+                swaps.push((h, i_max));
                 swap_rows(&mut a_matrix, h, i_max); // we then have to swap corresponding rows in b vector
                 (b_vector[Idx::new(&vec![h])], b_vector[Idx::new(&vec![i_max])]) = (b_vector[Idx::new(&vec![i_max])], b_vector[Idx::new(&vec![h])]); 
                 for i in h+1..self_shape[0] {
@@ -204,6 +205,7 @@ impl Tensor {
             result_tensor[Idx::new(&vec![i])] = (b_vector[Idx::new(&vec![i])] - sum)/a_matrix[Idx::new(&vec![i,i])];
         }
         
+       // println!("swaps: {:#?}", swaps);
         // we might restore then order of variables
         Ok(result_tensor)
     }
