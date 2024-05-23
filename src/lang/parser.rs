@@ -137,7 +137,7 @@ impl Parser {
                         }
                     }
                     Token::Literal(f) => return Err(format!("unexpected token {:?}", f)),
-                    Token::Punctuation(s) => return Err(format!("unexcpected token: {:?}", s)),
+                    Token::Punctuation(s) => return Err(format!("unexpected token: {:?}", s)),
                     Token::Comment(_) => return Ok(())
                 }
             }

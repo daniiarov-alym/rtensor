@@ -131,7 +131,7 @@ impl Tokenizer {
                             comment.push(next_char);
                             self.position += 1;
                         }
-                        tokens.push(Token::Comment(comment));
+                        //tokens.push(Token::Comment(comment));
                     }
                     _ => {
                         return Err(format!("unrecognized token: {}", c));
