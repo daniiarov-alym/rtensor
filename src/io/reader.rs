@@ -44,10 +44,10 @@ impl Reader {
             Ok(0) => Ok(String::new()),
             Ok(_) => {
                 let trimmed_input = input.trim().to_string();
-                match self.validate(&trimmed_input) {
-                    Ok(()) => Ok(trimmed_input),
-                    Err(err_msg) => Err(err_msg.to_string()),
+                if trimmed_input.is_empty() {
+                    return Ok(" ".to_string());
                 }
+                return Ok(trimmed_input);
             }
             Err(_) => Err("Failed to read input".to_string()),
         }
@@ -55,7 +55,7 @@ impl Reader {
 
     fn validate(&mut self, input: &str) -> Result<(), &'static str> {
         if input.trim().is_empty() {
-            Err("Input cannot be empty")
+            Ok(())
         } else {
             Ok(())
         }

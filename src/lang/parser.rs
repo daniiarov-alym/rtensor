@@ -26,16 +26,15 @@ impl Parser {
         self.current_position -= 1;
     }
 
-    // TODO: fix the issue that A=1+#foobar or A=#foobar is valid
-    pub fn parse_impl(&mut self) -> Result<Expr, String> {
+    pub fn parse_impl(&mut self) -> Result<Option<Expr>, String> {
         if self.tokens.len() == 0 {
-            return Err(String::from("empty expression"));
+            return Ok(None);
         }
         if self.tokens.len() == 1 {
             // this should be just identifier or literal
             match &self.tokens[0] {
-                Token::Identifier(id) => return Ok(Expr::Identifier(id.clone())),
-                Token::Literal(f) => return Ok(Expr::Literal(*f)),
+                Token::Identifier(id) => return Ok(Some(Expr::Identifier(id.clone()))),
+                Token::Literal(f) => return Ok(Some(Expr::Literal(*f))),
                 _ => return Err(format!("unexpected token: {:?}", self.tokens[0])),
             }
         }
@@ -85,7 +84,7 @@ impl Parser {
             }
         }
 
-        Ok(expr) // placeholder
+        Ok(Some(expr)) // placeholder
     }
 
     fn parse_expression_impl_base(&mut self, expr: &mut Expr) -> Result<(), String> {

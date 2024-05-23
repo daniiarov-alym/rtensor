@@ -92,6 +92,10 @@ fn main() {
                 let mut parser = lang::parser::Parser::new(tokens);
                 match parser.parse_impl() {
                     Ok(expr) => {
+                        if expr.is_none() {
+                            continue;
+                        }
+                        let expr = expr.unwrap();
                         if verbose {
                             let _ = writer.write_output(&format!("AST: {:?}", expr));
                         }
