@@ -67,7 +67,7 @@ impl Tokenizer {
         operator
     }
 
-    pub fn tokenize(&mut self) -> Vec<Token> {
+    pub fn tokenize(&mut self) -> Result<Vec<Token>, String> {
         let mut tokens = Vec::new();
         while self.position < self.input.len() {
             self.skip_whitespace();
@@ -134,12 +134,12 @@ impl Tokenizer {
                         tokens.push(Token::Comment(comment));
                     }
                     _ => {
-                        self.position += 1; // skip unsupported characters
+                        return Err(format!("unrecognized token: {}", c));
                     }
                 }
             }
         }
-        tokens
+        Ok(tokens)
     }
 }
 

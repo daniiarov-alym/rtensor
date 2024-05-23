@@ -86,6 +86,11 @@ fn main() {
                 }
                 let mut tokenizer = lang::tokenizer::Tokenizer::new(&read);
                 let tokens = tokenizer.tokenize();
+                if let Err(e) = tokens {
+                    let _ =  writer.write_output(&format!("Error: {}", e));
+                    continue;
+                }
+                let tokens = tokens.unwrap();
                 if verbose {
                     let _ = writer.write_output(&format!("Tokens: {:?}", tokens));
                 }
@@ -101,13 +106,13 @@ fn main() {
                         }
                         let result = dispatcher.process_expr(expr, verbose);
                         if let Err(e) = &result {
-                            println!("Error: {}", e);
+                            let _ = writer.write_output(&format!("Error: {}", e));
                             continue;
                         }
                         let result = result.unwrap();
                         let _ = writer.write_return_result(result);
                     }
-                    Err(err) => println!("Error: {}", err),
+                    Err(err) => {let _ = writer.write_output(&format!("Error: {}", err));}
                 }
             }
             Err(e) => {
