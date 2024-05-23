@@ -8,14 +8,14 @@ pub enum Token {
 }
 
 // TODO: proper tokenization of function calls? parsing fractions
-pub struct Tokenizer<'a> {
-    input: &'a str,
+pub struct Tokenizer {
+    input: String,
     position: usize,
 }
 
-impl<'a> Tokenizer<'a> {
-    pub fn new(input: &'a str) -> Self {
-        Tokenizer { input, position: 0 }
+impl Tokenizer {
+    pub fn new(input: &str) -> Self {
+        Tokenizer { input: remove_whitespace(input), position: 0 }
     }
 
     fn skip_whitespace(&mut self) {
@@ -141,4 +141,8 @@ impl<'a> Tokenizer<'a> {
         }
         tokens
     }
+}
+
+fn remove_whitespace(s: &str) -> String {
+    s.chars().filter(|c| !c.is_whitespace()).collect()
 }
