@@ -14,7 +14,7 @@ Usage: rtensor [options..]
 \t-f, --filename <filename>\tfilename containing input queries to the system
 \t--no-prompt\t\t\tdisable displaying prompt to user
 \t-h, --help\t\t\tdisplay this message
-\t-o, --output <filename>\\ttwrite output of the queries to the filename given
+\t-o, --output <filename>\t\ttwrite output of the queries to the filename given
 \t--verbose\t\t\tturn on verbose printing";
 
 fn main() {
