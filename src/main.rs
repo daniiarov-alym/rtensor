@@ -56,6 +56,10 @@ fn main() {
                 return;
             }
             output_filename = args[args_idx].clone();
+        } else {
+            eprintln!("unrecognized option: {}", args[args_idx]);
+            eprintln!("{}", HELP_MESSAGE);
+            return;
         }
         args_idx += 1;
     }
